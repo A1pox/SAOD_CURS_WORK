@@ -659,6 +659,67 @@ void fano_split(int L, int R, const std::vector<std::pair<unsigned char, double>
     fano_split(split_index + 1, R, probs, codes, current_code + "1");
 }
 
+std::string symbol_name(unsigned char ch) {
+    static const char* ctrl_names[32] = {
+        "NUL","SOH","STX","ETX","EOT","ENQ","ACK","BEL",
+        "BS", "TAB","LF","VT","FF","CR","SO","SI",
+        "DLE","DC1","DC2","DC3","DC4","NAK","SYN","ETB",
+        "CAN","EM","SUB","ESC","FS","GS","RS","US"
+    };
+
+/*
+0x00 NUL – Null
+0x01 SOH – Start of Heading
+0x02 STX – Start of Text
+0x03 ETX – End of Text
+0x04 EOT – End of Transmission
+0x05 ENQ – Enquiry
+0x06 ACK – Acknowledge
+0x07 BEL – Bell
+0x08 BS  – Backspace
+0x09 TAB – Horizontal Tab
+0x0A LF  – Line Feed
+0x0B VT  – Vertical Tab
+0x0C FF  – Form Feed
+0x0D CR  – Carriage Return
+0x0E SO  – Shift Out
+0x0F SI  – Shift In
+0x10 DLE – Data Link Escape
+0x11 DC1 – Device Control 1
+0x12 DC2 – Device Control 2
+0x13 DC3 – Device Control 3
+0x14 DC4 – Device Control 4
+0x15 NAK – Negative Acknowledge
+0x16 SYN – Synchronous Idle
+0x17 ETB – End of Transmission Block
+0x18 CAN – Cancel
+0x19 EM  – End of Medium
+0x1A SUB – Substitute
+0x1B ESC – Escape
+0x1C FS  – File Separator
+0x1D GS  – Group Separator
+0x1E RS  – Record Separator
+0x1F US  – Unit Separator
+*/
+
+    if (ch == ' ') {
+        return "SPACE";
+    }
+
+    if (ch < 32) {
+        return ctrl_names[ch];
+    }
+
+    if (ch < 128) {
+        char buf[2] = { (char)ch, '\0' };
+        return std::string(buf);
+    }
+
+    char temp[2] = { (char)ch, '\0' };
+    return cp866_to_utf8(temp, 1);
+}
+
+
 void encode_fano(const char* filename) {
     FILE* file = fopen(filename, "rb");
     if (!file) {
@@ -695,26 +756,25 @@ void encode_fano(const char* filename) {
     printf("+--------+-------------+--------+----------------------------+\n");
     
     double avgLen = 0.0, entropy = 0.0;
+
     for (auto& [ch, p] : probs) {
         const std::string& code = codes[ch];
-        int l = code.length();
+        int l = (int)code.length();
         avgLen += p * l;
         if (p > 0) entropy += -p * std::log2(p);
-        
-        char temp[2] = {(char)ch, '\0'};
-        std::string utf8_char = cp866_to_utf8(temp, 1);
-        
-        if (ch >= 32 && ch < 128)
-            printf("|  %3c   | %10.6f | %7d | %-24s |\n", ch, p, l, code.c_str());
-        else if (ch >= 128)
-            printf("| %-5s | %10.6f | %7d | %-24s |\n", utf8_char.c_str(), p, l, code.c_str());
-        else
-            printf("| 0x%02X | %10.6f | %7d | %-24s |\n", ch, p, l, code.c_str());
+
+        std::string name = symbol_name(ch);
+
+        printf("| %-6s | %10.6f | %7d | %-24s |\n",
+               name.c_str(), p, l, code.c_str());
     }
-    printf("+------+------------+---------+--------------------------+\n");
+
+    printf("+--------+-------------+--------+----------------------------+\n");
     printf("Энтропия: H = %.6f бит/символ\n", entropy);
     printf("Средняя длина кода: L = %.6f бит/символ\n", avgLen);
     printf("Избыточность: R = L - H = %.6f\n", avgLen - entropy);
+    size_t unique_count = probs.size();
+    printf("Кол-во уник символов: %zu\n", unique_count);
 }
 
 void encode_and_pack_fano(const char* input_filename, const char* output_filename) {
