@@ -254,22 +254,28 @@ void mergeSort(ListNode*& head) {
 
     ::queue<Record> a;
     ::queue<Record> b;
-    
+
     int k = 1;
-    
+
     while (true) {
+        a = ::queue<Record>();
+        b = ::queue<Record>();
+
         ListNode* curr = head;
-        int splits_count = 0;
+        bool has_b = false;
 
         while (curr) {
-            splits_count++;
             for (int i = 0; i < k && curr; i++) {
                 a.push(curr->data);
                 curr = curr->next;
             }
-            for (int i = 0; i < k && curr; i++) {
-                b.push(curr->data);
-                curr = curr->next;
+
+            if (curr) {
+                has_b = true;
+                for (int i = 0; i < k && curr; i++) {
+                    b.push(curr->data);
+                    curr = curr->next;
+                }
             }
         }
 
@@ -277,36 +283,36 @@ void mergeSort(ListNode*& head) {
         head = nullptr;
         ListNode* tail = nullptr;
 
-        if (splits_count <= 1) {
+        if (!has_b) {
             while (!a.empty()) {
                 ListNode* newNode = new ListNode(a.front());
                 a.pop();
-                if (!head) {
-                    head = tail = newNode;
-                } else {
-                    tail->next = newNode;
-                    tail = newNode;
-                }
+                if (!head) head = tail = newNode;
+                else { tail->next = newNode; tail = newNode; }
             }
-            while(!b.empty()) b.pop(); 
+            // b тут пустая, но оставим на всякий случай
+            while (!b.empty()) {
+                ListNode* newNode = new ListNode(b.front());
+                b.pop();
+                if (!head) head = tail = newNode;
+                else { tail->next = newNode; tail = newNode; }
+            }
             break;
         }
 
         while (!a.empty() || !b.empty()) {
             int c1 = k;
             int c2 = k;
-            
-            while ((c1 > 0 && !a.empty()) && (c2 > 0 && !b.empty())) {
+
+            while (c1 > 0 && c2 > 0 && !a.empty() && !b.empty()) {
                 if (recordLess(a.front(), b.front())) {
                     ListNode* newNode = new ListNode(a.front());
-                    a.pop();
-                    c1--;
+                    a.pop(); c1--;
                     if (!head) head = tail = newNode;
                     else { tail->next = newNode; tail = newNode; }
                 } else {
                     ListNode* newNode = new ListNode(b.front());
-                    b.pop();
-                    c2--;
+                    b.pop(); c2--;
                     if (!head) head = tail = newNode;
                     else { tail->next = newNode; tail = newNode; }
                 }
@@ -314,16 +320,14 @@ void mergeSort(ListNode*& head) {
 
             while (c1 > 0 && !a.empty()) {
                 ListNode* newNode = new ListNode(a.front());
-                a.pop();
-                c1--;
+                a.pop(); c1--;
                 if (!head) head = tail = newNode;
                 else { tail->next = newNode; tail = newNode; }
             }
 
             while (c2 > 0 && !b.empty()) {
                 ListNode* newNode = new ListNode(b.front());
-                b.pop();
-                c2--;
+                b.pop(); c2--;
                 if (!head) head = tail = newNode;
                 else { tail->next = newNode; tail = newNode; }
             }
@@ -332,6 +336,7 @@ void mergeSort(ListNode*& head) {
         k *= 2;
     }
 }
+
 
 void print_pages(ListNode* head) {
     if (!head) {
